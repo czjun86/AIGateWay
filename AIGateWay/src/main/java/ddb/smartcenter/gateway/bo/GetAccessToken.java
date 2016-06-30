@@ -1,0 +1,100 @@
+package ddb.smartcenter.gateway.bo;
+
+import java.io.PrintWriter;
+import java.net.URL;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSession;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+
+import ddb.smartcenter.gateway.util.ConfigUtil;
+import kkd.common.logger.LogWriter;
+import kkd.common.util.HttpUtil;
+
+public class GetAccessToken {
+
+	public  JSONObject getAccessToken(String IMEI,String uId,String path){
+		JSONObject sdkPara=new JSONObject();
+		sdkPara.put("grant_type", "client_credentials");
+		sdkPara.put("client_id", "4330b9e7-33b1-496e-ba7e-f71762c69bf9");
+		sdkPara.put("client_secret", "kdywCenter@2016");
+		sdkPara.put("telIMEI", IMEI);
+		sdkPara.put("account", uId);
+		StringBuffer params = new StringBuffer();
+		params.append(sdkPara);
+		
+		String sdkResp="";
+		String sdk_url="https://123.124.120.232:9011/rest/openapi/oauth/2.0/auth";
+	//	String sdk_url=ConfigUtil.getConfig("SDK_URL");//获取云平台url
+
+
+//		String path=this.getServletContext().getRealPath("/WEB-INF/");
+
+		//这是密钥库
+		String sslKeyStorePath = path+"smartgatewayca.keystore";
+		String sslKeyStorePassword = "123456";
+		String sslKeyStoreType = "JKS"; // 密钥库类型，有JKS PKCS12等
+        
+		//信任库，这里需要服务端来新人客户端才能调用，因为这个我是配置的https双向验证，不但是要客户端信任服务端，服务端也要信任客户端。
+		String sslTrustStore = path+"trust_cacerts";
+		String sslTrustStorePassword = "123456";
+//		System.setProperty("file.separator","/");
+		System.setProperty("javax.net.ssl.keyStore", sslKeyStorePath);
+		System.setProperty("javax.net.ssl.keyStorePassword",sslKeyStorePassword);
+		System.setProperty("javax.net.ssl.keyStoreType", sslKeyStoreType);
+		
+		
+		// 设置系统参数
+		System.setProperty("javax.net.ssl.trustStore", sslTrustStore);
+		System.setProperty("javax.net.ssl.trustStorePassword",sslTrustStorePassword);
+		System.setProperty("java.protocol.handler.pkgs", "sun.net.www.protocol");
+		
+		HttpsURLConnection conn = null;
+	    PrintWriter printer=null;
+		try {
+			URL url=new URL(sdk_url);
+		    conn = (HttpsURLConnection) url.openConnection();
+		    //conn.setSSLSocketFactory(ssf);
+
+		    //在连接前设置
+			((HttpsURLConnection) conn).setHostnameVerifier(new HostnameVerifier(){
+
+				public boolean verify(String arg0, SSLSession arg1) {
+					return true;
+				}
+				
+			});
+			conn.setRequestMethod("POST");
+			conn.setDoOutput(true);
+			conn.setDoInput(true);
+			conn.setRequestProperty("Content-Type", "application/json");
+//			conn.connect();
+			printer=new PrintWriter(conn.getOutputStream());
+			printer.write(params.toString());
+			printer.flush();
+		    sdkResp = HttpUtil.readInputStream(conn.getInputStream(), "UTF-8");
+			LogWriter.debug("----->SDK_Access_Token获取接口调用成功,返回内容："+sdkResp);
+		} catch (Exception e) {
+		    LogWriter.debug("SDK_Access_Token获取接口调用失败----------->"+e+e.getMessage());
+			e.printStackTrace();
+		}
+//		String sdkResp= HttpUtil.post("https://openapi.xxxxx.com/rest/openapi/oauth/2.0/app/auth?"+sdkPara, null);
+//		sdkResp="{'access_token':'50.a6b7dbd428f731035f771b8d15063f61.86400.1292922000-2346678-12432',"
+//				+ ",'error_code':1"
+//				+ ",'error_msg':'Success'}";
+		//华为接口返回参数
+		JSONObject sdkJson=JSON.parseObject(sdkResp);
+		
+	
+		return sdkJson;
+	}
+	
+	public static void main(String[] args) {
+		GetAccessToken tt=new GetAccessToken();
+		JSONObject ss=tt.getAccessToken("862095020869175", "500000066", "D:/2016work/AIGateWay/src/main/webapp/WEB-INF/");
+		System.out.println(ss);
+	}
+}

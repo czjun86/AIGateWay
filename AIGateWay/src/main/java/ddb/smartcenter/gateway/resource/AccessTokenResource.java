@@ -1,0 +1,53 @@
+package ddb.smartcenter.gateway.resource;
+
+import javax.servlet.ServletContext;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
+
+import com.alibaba.fastjson.JSONObject;
+
+import ddb.smartcenter.gateway.ReturnMsg;
+import ddb.smartcenter.gateway.bo.GetAccessToken;
+import ddb.smartcenter.gateway.input.AccessTokenParam;
+import ddb.smartcenter.gateway.out.AccessTokenRM;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+
+
+@Path("accesstoken")
+@Api(value = "/accesstoken(获取云平台token接口)")
+public class AccessTokenResource {
+
+@Path("get")
+@POST
+@Produces(value=MediaType.APPLICATION_JSON)
+@ApiOperation(value = "获取token", notes = "获取云平台token",response = AccessTokenRM.class, httpMethod = "POST")
+public ReturnMsg getToken(AccessTokenParam param,@ApiParam(value = "用户ID")@QueryParam("uid") String uId,@ApiParam(value = "用户token")@QueryParam("token") String token,
+		@ApiParam(value = "设备号")@QueryParam("devId") String deviceId,@Context HttpServletRequest req){
+	
+		String path=req.getServletContext().getRealPath("/WEB-INF/");
+
+		
+		//获取云平台access_token
+		GetAccessToken gt=new GetAccessToken();
+		JSONObject sdkJson=gt.getAccessToken(deviceId, uId,path);
+		String access_token = sdkJson.getString("access_token");
+	   if(access_token!=null){
+		   return new AccessTokenRM("SUC", "",access_token);
+	   }else{
+		   String msg=sdkJson.getString("error_msg");
+		   return new AccessTokenRM("ERROR", msg,access_token);
+	   }
+	  
+   }
+   
+}
